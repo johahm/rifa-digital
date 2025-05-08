@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>participa</title>
+  <style>
+    /* TODO EL CSS ORIGINAL MANTENIDO INTACTO */
+    body {
+      background: #0a0a1f;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    h1 img {
+      width: 50px;
+      height: auto;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    .buttons {
+      margin-bottom: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 10px;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .cell {
+      padding: 10px;
+      background-color: #e0e0e0;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+    .cell.taken {
+      background-color: red;
+      color: white;
+    }
+    .cell.paid {
+      background-color: green;
+      color: black;
+    }
+    .cell:hover:not(.paid):not(.taken) {
+      background-color: #74b9ff;
+    }
+    .message {
+      color: #e67e22;
+      font-weight: bold;
+      margin: 20px;
+    }
+    #countdown {
+      font-size: 12px;
+      color: #e67e22;
+      font-weight: bold;
+    }
+    .titulo-con-fondo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(to right, #0b2fa5, #203a43, #2c5364);
+      color: white;
+      padding: 0;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      flex-wrap: wrap;
+    }
+    .imagen-lateral {
+      width: 150px;
+      height: 150px;
+      background-image: url('cerdito.1.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .imagen-lateral:hover {
+      transform: scale(1.2);
+    }
+    .texto-central {
+  flex: 1;
+  text-align: center;
+  font-size: 28px;
+  padding: 0;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff6a00, #ffcc00, #ff6a00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shake 1.5s infinite;
+  display: inline-block;
+}
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 20px;
+      }
+      .titulo-con-fondo {
+        flex-direction: column-reverse;
+      }
+      .imagen-lateral {
+        margin-bottom: 10px;
+      }
+      button {
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      }
+    }
+    .admin-btn {
+      background-color: #3498db;
+      color: white;
+    }
+    .admin-btn:hover {
+      background-color: #2980b9;
+    }
+    .promo-banner {
+  background: linear-gradient(90deg, #e8ef07, #e0e0e0, #d0c003);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 10px 20px;
+  margin-bottom: 15px;
+  text-align: center;
+  animation: shake 1.5s infinite;
+  display: inline-block;
+}
+@keyframes shake {
+  0% { transform: rotate(0deg); }
+  10% { transform: rotate(2deg); }
+  20% { transform: rotate(-2deg); }
+  30% { transform: rotate(1.5deg); }
+  40% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1deg); }
+  60% { transform: rotate(-1deg); }
+  70% { transform: rotate(0.5deg); }
+  80% { transform: rotate(-0.5deg); }
+  90% { transform: rotate(0.2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+
+  </style>
+  
+</head>
+<body>
+  <div class="titulo-con-fondo">
+    <div class="imagen-lateral"></div>
+    <div class="texto-central">GRAN RIFA DE 2 CERDITOS MINI</div>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <div class="promo-banner">🎉 10.000 pesos el N° 🎉
+    
+  </div>
+
+  <div class="buttons">
+    <button class="admin-btn" onclick="modoAdministrador()">🔐 Administrador</button>
+  </div>
+
+  <div id="countdown"></div>
+
+  <div class="buttons">
+    <button onclick="exportarTodos()" id="exportBtn" style="display: none;">📤 Exportar Todos</button>
+    <button onclick="exportarPagados()" id="exportPagadosBtn" style="display: none;">✅ Exportar Pagados</button>
+    <button onclick="exportarNoPagados()" id="exportNoPagadosBtn" style="display: none;">❌ Exportar No Pagados</button>
+    <button id="resetBtn" onclick="resetRifa()" style="display: none;">🔄 Reiniciar Rifa</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const ADMIN_PASSWORD = "chucho1";
+    const fechaRifa = new Date("2025-05-30T00:00:00");
+    let data = JSON.parse(localStorage.getItem("rifa") || "{}");
+    let esAdmin = false;
+
+    function modoAdministrador() {
+      if (!esAdmin) {
+        const pass = prompt("Ingresa la contraseña de administrador:");
+        if (pass !== ADMIN_PASSWORD) {
+          alert("Contraseña incorrecta.");
+          return;
+        }
+        esAdmin = true;
+      }
+      document.getElementById("exportBtn").style.display = "inline-block";
+      document.getElementById("exportPagadosBtn").style.display = "inline-block";
+      document.getElementById("exportNoPagadosBtn").style.display = "inline-block";
+
+      if (new Date() >= new Date("2025-06-21T00:00:00")) {
+        document.getElementById("resetBtn").style.display = "inline-block";
+        document.getElementById("message").textContent = "";
+      }
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      for (let i = 0; i < 100; i++) {
+        const number = i.toString().padStart(2, "0");
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+
+        if (data[number]) {
+          const estado = data[number].pagado ? "Pagado" : "No pagado";
+          cell.textContent = `${number}\n${data[number].nombre} (${estado})`;
+          cell.classList.add(data[number].pagado ? "paid" : "taken");
+
+          cell.addEventListener("click", () => {
+            if (esAdmin) {
+              const accion = prompt(`Número ${number}\n Ingresa el número de la opción:\n1. Marcar como pagado\n2. Editar nombre\n3. Eliminar Datos\n`);
+              if (accion === "1") {
+                data[number].pagado = true;
+              } else if (accion === "2") {
+                const nuevoNombre = prompt("Nuevo nombre:", data[number].nombre);
+                if (nuevoNombre) data[number].nombre = nuevoNombre.trim().substring(0, 15);
+              } else if (accion === "3") {
+                delete data[number];
+              }
+              localStorage.setItem("rifa", JSON.stringify(data));
+              renderGrid();
+            }
+          });
+        } else {
+          cell.textContent = number;
+          cell.addEventListener("click", () => {
+            const name = prompt(`El número ${number} es excelente opción!\nIngresa tu nombre para apartarlo:`);
+            if (name) {
+              data[number] = { nombre: name.trim().substring(0, 15), pagado: false };
+              localStorage.setItem("rifa", JSON.stringify(data));
+              renderGrid();
+            }
+          });
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    function exportarTodos() {
+      let texto = 'NÚMERO - NOMBRE - ESTADO\n';
+      for (const [num, info] of Object.entries(data)) {
+        const estado = info.pagado ? 'Pagado' : 'Pendiente';
+        texto += `${num} - ${info.nombre} - ${estado}\n`;
+      }
+      descargarArchivo('rifa_todos.txt', texto);
+    }
+
+    function exportarPagados() {
+      let texto = 'NÚMERO - NOMBRE\n';
+      for (const [num, info] of Object.entries(data)) {
+        if (info.pagado) texto += `${num} - ${info.nombre}\n`;
+      }
+      descargarArchivo('rifa_pagados.txt', texto);
+    }
+
+    function exportarNoPagados() {
+      let texto = 'NÚMERO - NOMBRE\n';
+      for (const [num, info] of Object.entries(data)) {
+        if (!info.pagado) texto += `${num} - ${info.nombre}\n`;
+      }
+      descargarArchivo('rifa_pendientes.txt', texto);
+    }
+
+    function descargarArchivo(nombre, contenido) {
+      const blob = new Blob([contenido], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = nombre;
+      link.click();
+    }
+
+    function resetRifa() {
+      const pass = prompt("Para reiniciar la rifa, ingresa la contraseña de administrador:");
+      if (pass === ADMIN_PASSWORD) {
+        if (confirm("¿Estás seguro de que quieres reiniciar la rifa? ¡Se perderán todos los datos!")) {
+          localStorage.removeItem("rifa");
+          data = {};
+          renderGrid();
+        }
+      } else {
+        alert("Contraseña incorrecta. Acción cancelada.");
+      }
+    }
+
+    function actualizarCronometro() {
+      const now = new Date().getTime();
+      const tiempoRestante = fechaRifa - now;
+      const cronometro = document.getElementById("countdown");
+
+      if (tiempoRestante <= 0) {
+        cronometro.innerHTML = "¡La rifa Terminó!";
+        return;
+      }
+
+      const dias = Math.floor(tiempoRestante / (1000 * 60 * 60 * 24));
+      const horas = Math.floor((tiempoRestante % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutos = Math.floor((tiempoRestante % (1000 * 60 * 60)) / (1000 * 60));
+      const segundos = Math.floor((tiempoRestante % (1000 * 60)) / 1000);
+
+      cronometro.innerHTML = `Faltan ${dias} días, ${horas} horas, ${minutos} minutos y ${segundos} segundos para LLEVARTELOS!`;
+    }
+
+    function mostrarBotonReinicioSiAplica() {
+      const hoy = new Date();
+      const fechaLimite = new Date("2025-05-31T00:00:00");
+      const mensaje = document.getElementById('message');
+      const botonReset = document.getElementById('resetBtn');
+
+      if (hoy >= fechaLimite) {
+        mensaje.textContent = '';
+        botonReset.style.display = 'inline-block';
+      } else {
+        mensaje.textContent = 'JUEGA el 30 de Mayo con la lotería del META 10:30PM';
+        botonReset.style.display = 'none';
+      }
+    }
+
+    // Inicializar
+    mostrarBotonReinicioSiAplica();
+    renderGrid();
+    setInterval(actualizarCronometro, 1000);
+    document.addEventListener("click", () => {
+  const sonido = document.getElementById("oink-sound");
+  if (sonido) {
+    sonido.currentTime = 0;
+    sonido.play().catch((e) => {
+      // Algunos navegadores requieren interacción antes de permitir sonido
+      console.warn("No se pudo reproducir el sonido automáticamente:", e);
+    });
+  }
+});
+
+ </script>
+   <audio id="oink-sound" src="pig.mp3" preload="auto"></audio>
+
+</body>
+</html>
